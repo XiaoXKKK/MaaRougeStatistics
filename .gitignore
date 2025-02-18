@@ -1,3 +1,12 @@
+# Mac OS
+.DS_Store
+
+# debug configs
+.nicegui
+cache/
+maa_option.json
+maa_pi_config.json
+
 # docs
 docs/node_modules
 docs/.vuepress/.temp
