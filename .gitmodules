@@ -1,3 +1,6 @@
 [submodule "assets/MaaCommonAssets"]
 	path = assets/MaaCommonAssets
 	url = https://github.com/MaaXYZ/MaaCommonAssets
+[submodule "assets/resource"]
+	path = assets/resource
+	url = https://github.com/XiaoXKKK/MRSResource.git
