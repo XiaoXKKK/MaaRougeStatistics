@@ -10,6 +10,7 @@ from maa.custom_recognition import CustomRecognition
 from maa.notification_handler import NotificationHandler, NotificationType
 
 import cv2
+import time 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
@@ -24,12 +25,50 @@ def cv2AddChineseText(img, text, position, textColor, textSize):
     # 转换回OpenCV格式
     return cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
 
+def preprocess_image(img):
+    # 转换为HSV颜色空间（更易分离颜色）
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    
+    # 定义淡蓝色的HSV范围（需根据实际颜色微调）
+    lower_blue = np.array([85, 50, 50])  # H:90-120（青蓝色范围）
+    upper_blue = np.array([95, 255, 255])
+    
+    # 创建颜色掩膜
+    mask = cv2.inRange(hsv, lower_blue, upper_blue)
+    
+    # 形态学操作（去除噪点）
+    kernel = np.ones((2,2), np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
+    
+    # 增强对比度（CLAHE算法）
+    lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+    l_clahe = clahe.apply(l)
+    lab_clahe = cv2.merge((l_clahe,a,b))
+    enhanced = cv2.cvtColor(lab_clahe, cv2.COLOR_LAB2BGR)
+    
+    # 应用颜色掩膜到增强后的图像
+    result = cv2.bitwise_and(hsv, hsv, mask=mask)
+    
+    # # 转换为灰度图并进行自适应阈值处理
+    # gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+    # thresh = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+    #                               cv2.THRESH_BINARY,11,2)
+    
+    # # 最终处理：反转颜色（白底黑字更易识别）
+    # final = cv2.bitwise_not(thresh)
+    
+    return result
+
 
 import json
 
 # for register decorator
 resource = Resource()
 
+all_relics = []
+relic_names = []
 
 def main():
     user_path = "./"
@@ -70,14 +109,29 @@ def main():
         "藏品识别": {"action": "custom", "custom_action": "RelicRecognition"},
     }
 
-    # another way to register
-    # resource.register_custom_recognition("My_Recongition", MyRecongition())
-    # resource.register_custom_action("My_CustomAction", MyCustomAction())
+    global all_relics
+    all_relics = []
+    nums = 0
 
-    task_detail = tasker.post_task("藏品识别", pipeline_override).wait().get()
-    # do something with task_detail
-    print("task_detail:", task_detail)
+    relics_path = os.path.join("assets/resource", "image/relics")
 
+    global relic_names
+    with open('python/roguelike_topic_table.json', "r", encoding="utf-8") as f:
+        relics = json.load(f)['details']['rogue_4']['items']
+        relic_names = [relic['name'] for relic in relics.values()]
+
+
+    while True:
+        tasker.post_task("藏品识别", pipeline_override).wait().get()
+        if (nums == len(all_relics)):
+            print("total relics:", len(all_relics))
+            print(all_relics)
+            print("No new relics found, stop.")
+            break
+        nums = len(all_relics)
+        tasker.controller.post_swipe(1245,600,1245,400,100).wait()
+        time.sleep(1)
+        tasker.controller.post_click(1245, 600).wait()
 
 # auto register by decorator, can also call `resource.register_custom_action` manually
 @resource.custom_action("RelicRecognition")
@@ -93,51 +147,73 @@ class RelicRecognition(CustomAction):
         :param context: 运行上下文
         :return: 是否执行成功。-参考流水线协议 `on_error`
         """
-        print(f"on RelicRecognition.run, context: {context}, argv: {argv}")
-
-        # context.override_next(argv.node_name, ["TaskA", "TaskB"])
-
-        image = context.tasker.controller.cached_image
+        global all_relics
+        image = context.tasker.controller.post_screencap().wait().get()
         image_copy = image.copy()
+        image = preprocess_image(image)
+        cv2.imwrite("filterd.jpg", image)
+        
+        reco_detail = context.run_recognition(
+            "Relic", image, {"Relic": {
+            "recognition": "OCR",
+            "expected": "[\\u4e00-\\u9fa5]+",
+            "roi": [69,0,1144,631]
+            }}
+        )
+
         # context.tasker.controller.post_click(100, 100).wait()
 
-        relics_path = os.path.join("assets/resource", "image/relics")
+        global relic_names
+        relic_list = [] # 识别到的藏品列表
 
-        with open('python/roguelike_topic_table.json', "r") as f:
-            relics = json.load(f)['details']['rogue_4']['items']
+        # print(reco_detail.all_results)
 
-        relic_list = []
+        for all in reco_detail.all_results:
+            text = all.text
+            # print(text)
+            if (text[-1]=='a' or text[-1]=='A'):
+                text = text[:-1]+'α'
+            if (text[-1]=='b' or text[-1]=='B'):
+                text = text[:-1]+'β'
+            if (text[-1]=='y' or text[-1]=='Y'):
+                text = text[:-1]+'γ'
+            if text in relic_names:
+                # print(text)
+                relic_list.append(text)
+                box = all.box
+                cv2.rectangle(image_copy, (box[0], box[1]), 
+                            (box[0] + box[2], box[1] + box[3]), (0, 255, 0), 2)
+                image_copy = cv2AddChineseText(image_copy, text, (box[0], box[1] - 12), (0, 255, 0), 12)
 
-        for relic_file in os.listdir(relics_path):
-            reco_detail = context.run_recognition(
-                "Relic", image, {"Relic": {"recognition": "FeatureMatch", 
-                                           "template": "relics/"+relic_file,
-                                           "ordered_by": "Score"},
-                                           "roi": [
-                                                322,
-                                                152,
-                                                725,
-                                                500
-                                            ]}
-            )
-            if reco_detail is not None:
-                print(reco_detail)
-                w, h = reco_detail.box.w, reco_detail.box.h
-                if w > 90 or h > 90:
-                    continue
-                relic_name = relics[relic_file.split('.')[0]]['name']
-                relic_list.append(relic_name)
-                # draw rectangle
-                cv2.rectangle(image_copy, (reco_detail.box.x, reco_detail.box.y), 
-                              (reco_detail.box.x + w, reco_detail.box.y + h), (0, 255, 0), 2)
-                # add text
-                image_copy = cv2AddChineseText(image_copy, relic_name, (reco_detail.box.x, reco_detail.box.y), (0, 255, 0), 12)
+        # for relic_file in os.listdir(relics_path):
+        #     reco_detail = context.run_recognition(
+        #         "Relic", image, {"Relic": {"recognition": "FeatureMatch", 
+        #                                    "template": "relics/"+relic_file,
+        #                                    "ordered_by": "Score"},
+        #                                    "roi": [69,0,1144,631]
+        #                                    }
+        #     )
+        #     if reco_detail is not None:
+        #         print(reco_detail)
+        #         w, h = reco_detail.box.w, reco_detail.box.h
+        #         if w > 90 or h > 90:
+        #             continue
+        #         relic_name = relics[relic_file.split('.')[0]]['name']
+        #         relic_list.append(relic_name)
+        #         # draw rectangle
+        #         cv2.rectangle(image_copy, (reco_detail.box.x, reco_detail.box.y), 
+        #                       (reco_detail.box.x + w, reco_detail.box.y + h), (0, 255, 0), 2)
+        #         # add text
+        #         image_copy = cv2AddChineseText(image_copy, relic_name, (reco_detail.box.x, reco_detail.box.y), (0, 255, 0), 12)
         
         # save copy image
-        cv2.imwrite("relics_recognition.jpg", image_copy)
+        cv2.imwrite("relics_recognition"+ str(reco_detail.reco_id) +".jpg", image_copy)
 
         print(relic_list)
-        print("nums:", len(relic_list))
+        print("nums:", len(relic_list))     
+
+        all_relics.extend(relic_list)
+        all_relics = list(set(all_relics))
 
         return CustomAction.RunResult(success=True)
 
