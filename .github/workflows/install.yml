@@ -62,6 +62,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
+          token: ${{ secrets.RES }}
 
       - name: Download MaaFramework
         uses: robinraju/release-downloader@v1
@@ -94,6 +95,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
+          token: ${{ secrets.RES }}
 
       - name: Download MaaFramework
         uses: robinraju/release-downloader@v1
@@ -126,6 +128,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
+          token: ${{ secrets.RES }}
 
       - name: Download MaaFramework
         uses: robinraju/release-downloader@v1
@@ -158,6 +161,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
+          token: ${{ secrets.RES }}
 
       - name: Download MaaFramework
         uses: robinraju/release-downloader@v1
