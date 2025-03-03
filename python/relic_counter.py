@@ -1,5 +1,7 @@
 # python -m pip install maafw
 import os
+import json
+from enum import Enum
 from maa.tasker import Tasker
 from maa.toolkit import Toolkit
 from maa.context import Context
@@ -61,14 +63,11 @@ def preprocess_image(img):
     
     return result
 
-
-import json
-
 # for register decorator
 resource = Resource()
 
 all_relics = []
-relic_names = []
+relic_names = {}
 
 def main():
     user_path = "./"
@@ -106,7 +105,9 @@ def main():
 
     # just an example, use it in json
     pipeline_override = {
-        "藏品识别": {"action": "custom", "custom_action": "RelicRecognition"},
+        "藏品识别": {"action": "custom", "custom_action": "RelicRecognition", "custom_action_param": {
+            "topic": "rogue_4"
+        }},
     }
 
     global all_relics
@@ -117,10 +118,18 @@ def main():
 
     global relic_names
     with open('python/roguelike_topic_table.json', "r", encoding="utf-8") as f:
-        relics = json.load(f)['details']['rogue_4']['items']
-        relic_names = [relic['name'] for relic in relics.values()]
+        json_data = json.load(f)
+        for topic in ["rogue_1", "rogue_2", "rogue_3", "rogue_4"]:
+            relics = json_data['details'][topic]['items']
+            relic_names[topic] = [relic['name'] for relic in relics.values() if relic['type'] == 'RELIC']
 
+    # relic_names = list(set(relic_names))
+    print(relic_names)
 
+    # pull up 
+    # for _ in range(5):
+    #     tasker.controller.post_swipe(1245,50,1245,600,30).wait()
+    #     time.sleep(2)
     while True:
         tasker.post_task("藏品识别", pipeline_override).wait().get()
         if (nums == len(all_relics)):
@@ -129,7 +138,7 @@ def main():
             print("No new relics found, stop.")
             break
         nums = len(all_relics)
-        tasker.controller.post_swipe(1245,600,1245,400,100).wait()
+        tasker.controller.post_swipe(1245, 600, 1245, 450, 90).wait()
         time.sleep(1)
         tasker.controller.post_click(1245, 600).wait()
 
@@ -147,6 +156,8 @@ class RelicRecognition(CustomAction):
         :param context: 运行上下文
         :return: 是否执行成功。-参考流水线协议 `on_error`
         """
+        print(argv.custom_action_param)
+        topic = json.loads(argv.custom_action_param)['topic']
         global all_relics
         image = context.tasker.controller.post_screencap().wait().get()
         image_copy = image.copy()
@@ -170,6 +181,8 @@ class RelicRecognition(CustomAction):
 
         for all in reco_detail.all_results:
             text = all.text
+            if(text == ''):
+                continue
             # print(text)
             if (text[-1]=='a' or text[-1]=='A'):
                 text = text[:-1]+'α'
@@ -177,7 +190,7 @@ class RelicRecognition(CustomAction):
                 text = text[:-1]+'β'
             if (text[-1]=='y' or text[-1]=='Y'):
                 text = text[:-1]+'γ'
-            if text in relic_names:
+            if text in relic_names[topic]:
                 # print(text)
                 relic_list.append(text)
                 box = all.box
