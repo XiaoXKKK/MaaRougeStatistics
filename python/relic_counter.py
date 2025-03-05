@@ -66,8 +66,9 @@ def preprocess_image(img):
 # for register decorator
 resource = Resource()
 
-all_relics = []
-relic_names = {}
+def pi_cli_run():
+    Toolkit.pi_register_custom_action("RelicRecognition", RelicRecognition())
+    Toolkit.pi_run_cli("assets", "./", False)
 
 def main():
     user_path = "./"
@@ -110,41 +111,28 @@ def main():
         }},
     }
 
-    global all_relics
-    all_relics = []
-    nums = 0
-
-    relics_path = os.path.join("assets/resource", "image/relics")
-
-    global relic_names
-    with open('python/roguelike_topic_table.json', "r", encoding="utf-8") as f:
-        json_data = json.load(f)
-        for topic in ["rogue_1", "rogue_2", "rogue_3", "rogue_4"]:
-            relics = json_data['details'][topic]['items']
-            relic_names[topic] = [relic['name'] for relic in relics.values() if relic['type'] == 'RELIC']
-
-    # relic_names = list(set(relic_names))
-    print(relic_names)
+    # relics_path = os.path.join("assets/resource", "image/relics")
 
     # pull up 
     # for _ in range(5):
     #     tasker.controller.post_swipe(1245,50,1245,600,30).wait()
     #     time.sleep(2)
-    while True:
-        tasker.post_task("藏品识别", pipeline_override).wait().get()
-        if (nums == len(all_relics)):
-            print("total relics:", len(all_relics))
-            print(all_relics)
-            print("No new relics found, stop.")
-            break
-        nums = len(all_relics)
-        tasker.controller.post_swipe(1245, 600, 1245, 450, 90).wait()
-        time.sleep(1)
-        tasker.controller.post_click(1245, 600).wait()
 
 # auto register by decorator, can also call `resource.register_custom_action` manually
 @resource.custom_action("RelicRecognition")
 class RelicRecognition(CustomAction):
+    relic_names = {}
+    if not os.path.exists("python/roguelike_topic_table.json"):
+        raise FileNotFoundError("roguelike_topic_table.json not found.")
+    with open('python/roguelike_topic_table.json', "r", encoding="utf-8") as f:
+        json_data = json.load(f)
+        for topic in ["rogue_1", "rogue_2", "rogue_3", "rogue_4"]:
+            relics = json_data['details'][topic]['items']
+            relic_names[topic] = [relic['name'] for relic in relics.values() if relic['type'] == 'RELIC']
+    
+    def __init__(self):
+        self.all_relics = []
+        self._handle = self._c_run_agent
 
     def run(
         self,
@@ -158,78 +146,92 @@ class RelicRecognition(CustomAction):
         """
         print(argv.custom_action_param)
         topic = json.loads(argv.custom_action_param)['topic']
-        global all_relics
-        image = context.tasker.controller.post_screencap().wait().get()
-        image_copy = image.copy()
-        image = preprocess_image(image)
-        cv2.imwrite("filterd.jpg", image)
-        
-        reco_detail = context.run_recognition(
-            "Relic", image, {"Relic": {
-            "recognition": "OCR",
-            "expected": "[\\u4e00-\\u9fa5]+",
-            "roi": [69,0,1144,631]
-            }}
-        )
 
-        # context.tasker.controller.post_click(100, 100).wait()
+        nums = 0
 
-        global relic_names
-        relic_list = [] # 识别到的藏品列表
+        while True:
+            image = context.tasker.controller.post_screencap().wait().get()
+            image_copy = image.copy()
+            image = preprocess_image(image)
+            # cv2.imwrite("filterd.jpg", image)
+            
+            reco_detail = context.run_recognition(
+                "Relic", image, {"Relic": {
+                "recognition": "OCR",
+                "expected": "[\\u4e00-\\u9fa5]+",
+                "roi": [69,0,1144,631]
+                }}
+            )
 
-        # print(reco_detail.all_results)
+            # context.tasker.controller.post_click(100, 100).wait()
 
-        for all in reco_detail.all_results:
-            text = all.text
-            if(text == ''):
-                continue
-            # print(text)
-            if (text[-1]=='a' or text[-1]=='A'):
-                text = text[:-1]+'α'
-            if (text[-1]=='b' or text[-1]=='B'):
-                text = text[:-1]+'β'
-            if (text[-1]=='y' or text[-1]=='Y'):
-                text = text[:-1]+'γ'
-            if text in relic_names[topic]:
+            relic_list = [] # 识别到的藏品列表
+
+            # print(reco_detail.all_results)
+
+            for all in reco_detail.all_results:
+                text = all.text
+                if(text == ''):
+                    continue
                 # print(text)
-                relic_list.append(text)
-                box = all.box
-                cv2.rectangle(image_copy, (box[0], box[1]), 
-                            (box[0] + box[2], box[1] + box[3]), (0, 255, 0), 2)
-                image_copy = cv2AddChineseText(image_copy, text, (box[0], box[1] - 12), (0, 255, 0), 12)
+                if (text[-1]=='a' or text[-1]=='A'):
+                    text = text[:-1]+'α'
+                if (text[-1]=='b' or text[-1]=='B'):
+                    text = text[:-1]+'β'
+                if (text[-1]=='y' or text[-1]=='Y'):
+                    text = text[:-1]+'γ'
+                if text in self.relic_names[topic]:
+                    # print(text)
+                    relic_list.append(text)
+                    box = all.box
+                    cv2.rectangle(image_copy, (box[0], box[1]), 
+                                (box[0] + box[2], box[1] + box[3]), (0, 255, 0), 2)
+                    image_copy = cv2AddChineseText(image_copy, text, (box[0], box[1] - 12), (0, 255, 0), 12)
 
-        # for relic_file in os.listdir(relics_path):
-        #     reco_detail = context.run_recognition(
-        #         "Relic", image, {"Relic": {"recognition": "FeatureMatch", 
-        #                                    "template": "relics/"+relic_file,
-        #                                    "ordered_by": "Score"},
-        #                                    "roi": [69,0,1144,631]
-        #                                    }
-        #     )
-        #     if reco_detail is not None:
-        #         print(reco_detail)
-        #         w, h = reco_detail.box.w, reco_detail.box.h
-        #         if w > 90 or h > 90:
-        #             continue
-        #         relic_name = relics[relic_file.split('.')[0]]['name']
-        #         relic_list.append(relic_name)
-        #         # draw rectangle
-        #         cv2.rectangle(image_copy, (reco_detail.box.x, reco_detail.box.y), 
-        #                       (reco_detail.box.x + w, reco_detail.box.y + h), (0, 255, 0), 2)
-        #         # add text
-        #         image_copy = cv2AddChineseText(image_copy, relic_name, (reco_detail.box.x, reco_detail.box.y), (0, 255, 0), 12)
-        
-        # save copy image
-        cv2.imwrite("relics_recognition"+ str(reco_detail.reco_id) +".jpg", image_copy)
+            # for relic_file in os.listdir(relics_path):
+            #     reco_detail = context.run_recognition(
+            #         "Relic", image, {"Relic": {"recognition": "FeatureMatch", 
+            #                                    "template": "relics/"+relic_file,
+            #                                    "ordered_by": "Score"},
+            #                                    "roi": [69,0,1144,631]
+            #                                    }
+            #     )
+            #     if reco_detail is not None:
+            #         print(reco_detail)
+            #         w, h = reco_detail.box.w, reco_detail.box.h
+            #         if w > 90 or h > 90:
+            #             continue
+            #         relic_name = relics[relic_file.split('.')[0]]['name']
+            #         relic_list.append(relic_name)
+            #         # draw rectangle
+            #         cv2.rectangle(image_copy, (reco_detail.box.x, reco_detail.box.y), 
+            #                       (reco_detail.box.x + w, reco_detail.box.y + h), (0, 255, 0), 2)
+            #         # add text
+            #         image_copy = cv2AddChineseText(image_copy, relic_name, (reco_detail.box.x, reco_detail.box.y), (0, 255, 0), 12)
+            
+            # save copy image
 
-        print(relic_list)
-        print("nums:", len(relic_list))     
+            cv2.imwrite("debug/" + "relics_recognition"+ str(reco_detail.reco_id) +".jpg", image_copy)
 
-        all_relics.extend(relic_list)
-        all_relics = list(set(all_relics))
+            print(relic_list)
+            print("nums:", len(relic_list))     
+
+            self.all_relics.extend(relic_list)
+            self.all_relics = list(set(self.all_relics))
+            if (nums == len(self.all_relics)):
+                print("total relics:", len(self.all_relics))
+                # print(self.all_relics)
+                print("No new relics found, stop.")
+                break
+            nums = len(self.all_relics)
+            context.tasker.controller.post_swipe(1245, 600, 1245, 450, 90).wait()
+            time.sleep(1)
+            context.tasker.controller.post_click(1245, 600).wait()
+
+        print(self.all_relics)
 
         return CustomAction.RunResult(success=True)
 
 
 if __name__ == "__main__":
-    main()
+    pi_cli_run()

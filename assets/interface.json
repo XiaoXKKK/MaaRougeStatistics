@@ -30,8 +30,21 @@
     ],
     "task": [
         {
-            "name": "OCR_Test",
-            "entry": "swipeUp"
+            "name": "傀影肉鸽",
+            "entry": "RelicRecognition_1"
+        },
+        {
+            "name": "水月肉鸽",
+            "entry": "RelicRecognition_2"
+        },
+        {
+            "name": "萨米肉鸽",
+            "entry": "RelicRecognition_3"
+        },
+        {
+            "name": "萨卡兹肉鸽",
+            "entry": "RelicRecognition_4"
         }
-    ]
+    ],
+    "option": {}
 }
