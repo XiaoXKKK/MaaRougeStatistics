@@ -3,28 +3,13 @@
         {
             "name": "安卓端",
             "type": "Adb"
-        },
-        {
-            "name": "桌面端",
-            "type": "Win32",
-            "win32": {
-                "class_regex": ".*",
-                "window_regex": "Visual Studio"
-            }
         }
     ],
     "resource": [
         {
-            "name": "官服",
+            "name": "默认资源",
             "path": [
                 "{PROJECT_DIR}/resource"
-            ]
-        },
-        {
-            "name": "B 服",
-            "path": [
-                "{PROJECT_DIR}/resource",
-                "{PROJECT_DIR}/resource_bilibili"
             ]
         }
     ],
@@ -44,6 +29,10 @@
         {
             "name": "萨卡兹肉鸽",
             "entry": "RelicRecognition_4"
+        },
+        {
+            "name": "Swipe Test",
+            "entry": "swipeUp"
         }
     ],
     "option": {}

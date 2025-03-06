@@ -1,3 +1,4 @@
 maafw
 opencv-python
 scrapy
+pyinstaller

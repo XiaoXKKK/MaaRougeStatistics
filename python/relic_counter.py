@@ -68,7 +68,7 @@ resource = Resource()
 
 def pi_cli_run():
     Toolkit.pi_register_custom_action("RelicRecognition", RelicRecognition())
-    Toolkit.pi_run_cli("assets", "./", False)
+    Toolkit.pi_run_cli("./", "./", False)
 
 def main():
     user_path = "./"
@@ -121,10 +121,11 @@ def main():
 # auto register by decorator, can also call `resource.register_custom_action` manually
 @resource.custom_action("RelicRecognition")
 class RelicRecognition(CustomAction):
+    table_path = os.path.join("assets/resource/data", "roguelike_topic_table.json")
     relic_names = {}
-    if not os.path.exists("python/roguelike_topic_table.json"):
+    if not os.path.exists(table_path):
         raise FileNotFoundError("roguelike_topic_table.json not found.")
-    with open('python/roguelike_topic_table.json', "r", encoding="utf-8") as f:
+    with open(table_path, "r", encoding="utf-8") as f:
         json_data = json.load(f)
         for topic in ["rogue_1", "rogue_2", "rogue_3", "rogue_4"]:
             relics = json_data['details'][topic]['items']
