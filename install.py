@@ -35,7 +35,7 @@ def bulid():
     add_data_param2 = f"{maa_bin_path2}{os.pathsep}MaaAgentBinary"
 
     command = [
-        "python/relic_counter.py",
+        "run_cli.py",
         "--name=install",
         f"--add-data={add_data_param2}",
         f"--distpath={working_dir}",
@@ -131,8 +131,8 @@ def install_chores():
 
 
 if __name__ == "__main__":
+    # install_deps()
     bulid()
-    install_deps()
     install_resource()
     install_chores()
 

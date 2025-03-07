@@ -88,43 +88,43 @@ jobs:
           name: MaaXXX-win-${{ matrix.arch }}
           path: "install"
 
-  ubuntu:
-    needs: meta
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [aarch64, x86_64]
-      fail-fast: false
+  # ubuntu:
+  #   needs: meta
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       arch: [aarch64, x86_64]
+  #     fail-fast: false
 
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          token: ${{ secrets.RES }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         submodules: true
+  #         token: ${{ secrets.RES }}
 
-      - name: Download MaaFramework
-        uses: robinraju/release-downloader@v1
-        with:
-          repository: MaaXYZ/MaaFramework
-          fileName: "MAA-linux-${{ matrix.arch }}*"
-          latest: true
-          out-file-path: "deps"
-          extract: true
+  #     - name: Download MaaFramework
+  #       uses: robinraju/release-downloader@v1
+  #       with:
+  #         repository: MaaXYZ/MaaFramework
+  #         fileName: "MAA-linux-${{ matrix.arch }}*"
+  #         latest: true
+  #         out-file-path: "deps"
+  #         extract: true
 
-      - name: Install requirements
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt  
+  #     - name: Install requirements
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         pip install -r requirements.txt  
 
-      - name: Install
-        shell: bash
-        run: |
-          python ./install.py ${{ needs.meta.outputs.tag }}
+  #     - name: Install
+  #       shell: bash
+  #       run: |
+  #         python ./install.py ${{ needs.meta.outputs.tag }}
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: MaaXXX-linux-${{ matrix.arch }}
-          path: "install"
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: MaaXXX-linux-${{ matrix.arch }}
+  #         path: "install"
 
   macos:
     needs: meta
@@ -199,7 +199,7 @@ jobs:
 
   release:
     if: ${{ needs.meta.outputs.is_release == 'true' }}
-    needs: [meta, windows, ubuntu, macos]
+    needs: [meta, windows, macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

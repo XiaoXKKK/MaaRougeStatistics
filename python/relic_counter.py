@@ -68,7 +68,7 @@ resource = Resource()
 
 def pi_cli_run():
     Toolkit.pi_register_custom_action("RelicRecognition", RelicRecognition())
-    Toolkit.pi_run_cli("./", "./", False)
+    Toolkit.pi_run_cli("./assets", "./", False)
 
 def main():
     user_path = "./"
