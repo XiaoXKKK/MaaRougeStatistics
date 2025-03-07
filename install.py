@@ -1,12 +1,11 @@
 from pathlib import Path
+import PyInstaller.__main__
+import site
+import os
 
 import shutil
 import sys
-import os
 import json
-import site
-
-import PyInstaller.__main__
 
 from configure import configure_ocr_model
 
@@ -40,7 +39,7 @@ def bulid():
         f"--add-data={add_data_param2}",
         f"--distpath={working_dir}",
         "--clean",
-        "--noconfirm"
+        "--noconfirm",
     ]
     PyInstaller.__main__.run(command)
     
@@ -65,30 +64,7 @@ def bulid():
         raise FileNotFoundError("not found maa/bin")
     shutil.copytree(
         maa_bin_path,
-        install_path,
-        dirs_exist_ok=True,
-    )
-
-def install_deps():
-    if not (working_dir / "deps" / "bin").exists():
-        print("Please download the MaaFramework to \"deps\" first.")
-        print("请先下载 MaaFramework 到 \"deps\"。")
-        sys.exit(1)
-
-    shutil.copytree(
-        working_dir / "deps" / "bin",
-        install_path,
-        ignore=shutil.ignore_patterns(
-            "*MaaDbgControlUnit*",
-            "*MaaThriftControlUnit*",
-            "*MaaRpc*",
-            "*MaaHttp*",
-        ),
-        dirs_exist_ok=True,
-    )
-    shutil.copytree(
-        working_dir / "deps" / "share" / "MaaAgentBinary",
-        install_path / "MaaAgentBinary",
+        install_path / "_internal" / "maa" / "bin",
         dirs_exist_ok=True,
     )
 
@@ -131,9 +107,6 @@ def install_chores():
 
 
 if __name__ == "__main__":
-    # install_deps()
     bulid()
     install_resource()
     install_chores()
-
-    print(f"Install to {install_path} successfully.")

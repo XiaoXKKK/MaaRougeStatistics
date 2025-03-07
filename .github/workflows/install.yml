@@ -85,7 +85,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: MaaXXX-win-${{ matrix.arch }}
+          name: MaaRougeStatistics-win-${{ matrix.arch }}
           path: "install"
 
   # ubuntu:
@@ -123,7 +123,7 @@ jobs:
 
   #     - uses: actions/upload-artifact@v4
   #       with:
-  #         name: MaaXXX-linux-${{ matrix.arch }}
+  #         name: MaaRougeStatistics-linux-${{ matrix.arch }}
   #         path: "install"
 
   macos:
@@ -161,7 +161,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: MaaXXX-macos-${{ matrix.arch }}
+          name: MaaRougeStatistics-macos-${{ matrix.arch }}
           path: "install"
 
   # android:
@@ -194,7 +194,7 @@ jobs:
 
   #     - uses: actions/upload-artifact@v4
   #       with:
-  #         name: MaaXXX-android-${{ matrix.arch }}
+  #         name: MaaRougeStatistics-android-${{ matrix.arch }}
   #         path: "install"
 
   release:

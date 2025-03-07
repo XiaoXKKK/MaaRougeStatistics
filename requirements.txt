@@ -1,4 +1,5 @@
-maafw
+maafw == 3.0.3
 opencv-python
 scrapy
 pyinstaller
+Pillow

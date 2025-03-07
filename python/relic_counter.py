@@ -1,15 +1,13 @@
 # python -m pip install maafw
 import os
 import json
-from enum import Enum
+
 from maa.tasker import Tasker
 from maa.toolkit import Toolkit
 from maa.context import Context
 from maa.resource import Resource
 from maa.controller import AdbController
 from maa.custom_action import CustomAction
-from maa.custom_recognition import CustomRecognition
-from maa.notification_handler import NotificationHandler, NotificationType
 
 import cv2
 import time 
@@ -38,9 +36,9 @@ def preprocess_image(img):
     # 创建颜色掩膜
     mask = cv2.inRange(hsv, lower_blue, upper_blue)
     
-    # 形态学操作（去除噪点）
-    kernel = np.ones((2,2), np.uint8)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
+    # # 形态学操作（去除噪点）
+    # kernel = np.ones((2,2), np.uint8)
+    # mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
     
     # 增强对比度（CLAHE算法）
     lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
@@ -121,7 +119,7 @@ def main():
 # auto register by decorator, can also call `resource.register_custom_action` manually
 @resource.custom_action("RelicRecognition")
 class RelicRecognition(CustomAction):
-    table_path = os.path.join("assets/resource/data", "roguelike_topic_table.json")
+    table_path = os.path.join("resource/data", "roguelike_topic_table.json")
     relic_names = {}
     if not os.path.exists(table_path):
         raise FileNotFoundError("roguelike_topic_table.json not found.")
@@ -154,7 +152,6 @@ class RelicRecognition(CustomAction):
             image = context.tasker.controller.post_screencap().wait().get()
             image_copy = image.copy()
             image = preprocess_image(image)
-            # cv2.imwrite("filterd.jpg", image)
             
             reco_detail = context.run_recognition(
                 "Relic", image, {"Relic": {
@@ -163,7 +160,7 @@ class RelicRecognition(CustomAction):
                 "roi": [69,0,1144,631]
                 }}
             )
-
+            cv2.imwrite("debug/" + "filterd" + str(reco_detail.reco_id) + ".jpg", image)
             # context.tasker.controller.post_click(100, 100).wait()
 
             relic_list = [] # 识别到的藏品列表
@@ -174,7 +171,7 @@ class RelicRecognition(CustomAction):
                 text = all.text
                 if(text == ''):
                     continue
-                # print(text)
+                print(text)
                 if (text[-1]=='a' or text[-1]=='A'):
                     text = text[:-1]+'α'
                 if (text[-1]=='b' or text[-1]=='B'):

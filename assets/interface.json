@@ -31,8 +31,8 @@
             "entry": "RelicRecognition_4"
         },
         {
-            "name": "Swipe Test",
-            "entry": "swipeUp"
+            "name": "退出重进",
+            "entry": "Exit_Rouge"
         }
     ],
     "option": {}
