@@ -14,6 +14,12 @@ import time
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+class RougeTopic:
+    def __init__(self, topic, font_color):
+        self.topic = topic
+        self.relics = []
+        self.font_color = font_color
+
 def cv2AddChineseText(img, text, position, textColor, textSize):
     if (isinstance(img, np.ndarray)):  # 判断是否OpenCV图片类型
         img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
@@ -25,28 +31,30 @@ def cv2AddChineseText(img, text, position, textColor, textSize):
     # 转换回OpenCV格式
     return cv2.cvtColor(np.asarray(img), cv2.COLOR_RGB2BGR)
 
-def preprocess_image(img):
+def preprocess_image(img, base_color):
+    # return img
+    print(base_color)
     # 转换为HSV颜色空间（更易分离颜色）
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     
-    # 定义淡蓝色的HSV范围（需根据实际颜色微调）
-    lower_blue = np.array([85, 50, 50])  # H:90-120（青蓝色范围）
-    upper_blue = np.array([95, 255, 255])
+    # 定义字体颜色
+    lower_color = np.array([base_color - 1, 50, 50])
+    upper_color = np.array([base_color + 1, 255, 255]) 
     
     # 创建颜色掩膜
-    mask = cv2.inRange(hsv, lower_blue, upper_blue)
+    mask = cv2.inRange(hsv, lower_color, upper_color)
     
     # # 形态学操作（去除噪点）
     # kernel = np.ones((2,2), np.uint8)
     # mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
     
-    # 增强对比度（CLAHE算法）
-    lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
-    l, a, b = cv2.split(lab)
-    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
-    l_clahe = clahe.apply(l)
-    lab_clahe = cv2.merge((l_clahe,a,b))
-    enhanced = cv2.cvtColor(lab_clahe, cv2.COLOR_LAB2BGR)
+    # # 增强对比度（CLAHE算法）
+    # lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+    # l, a, b = cv2.split(lab)
+    # clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+    # l_clahe = clahe.apply(l)
+    # lab_clahe = cv2.merge((l_clahe,a,b))
+    # enhanced = cv2.cvtColor(lab_clahe, cv2.COLOR_LAB2BGR)
     
     # 应用颜色掩膜到增强后的图像
     result = cv2.bitwise_and(hsv, hsv, mask=mask)
@@ -143,16 +151,21 @@ class RelicRecognition(CustomAction):
         :param context: 运行上下文
         :return: 是否执行成功。-参考流水线协议 `on_error`
         """
-        print(argv.custom_action_param)
+        self.all_relics = []
+        # print(argv.custom_action_param)
         topic = json.loads(argv.custom_action_param)['topic']
+        if topic not in ["rogue_1", "rogue_2", "rogue_3", "rogue_4"]:
+            raise ValueError("Invalid topic.")
+        
+        base_color = 20 if topic == "rogue_1" else 90
 
         nums = 0
 
         while True:
             image = context.tasker.controller.post_screencap().wait().get()
             image_copy = image.copy()
-            image = preprocess_image(image)
-            
+            image = preprocess_image(image, base_color)
+            # cv2.imwrite("debug/" + "filterd" + ".jpg", image)
             reco_detail = context.run_recognition(
                 "Relic", image, {"Relic": {
                 "recognition": "OCR",
@@ -160,6 +173,10 @@ class RelicRecognition(CustomAction):
                 "roi": [69,0,1144,631]
                 }}
             )
+            if reco_detail is None:
+                print("total relics:", len(self.all_relics))
+                print("No new relics found, stop.")
+                break
             cv2.imwrite("debug/" + "filterd" + str(reco_detail.reco_id) + ".jpg", image)
             # context.tasker.controller.post_click(100, 100).wait()
 
