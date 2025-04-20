@@ -9,6 +9,10 @@ from maa.resource import Resource
 from maa.controller import AdbController
 from maa.custom_action import CustomAction
 
+# 修改粘贴板内容
+# python -m pip install pyperclip
+import pyperclip
+
 import cv2
 import time 
 import numpy as np
@@ -129,14 +133,17 @@ def main():
 class RelicRecognition(CustomAction):
     table_path = os.path.join("resource/data", "roguelike_topic_table.json")
     relic_names = {}
+    names_2_ids = {}
     if not os.path.exists(table_path):
         raise FileNotFoundError("roguelike_topic_table.json not found.")
     with open(table_path, "r", encoding="utf-8") as f:
         json_data = json.load(f)
         for topic in ["rogue_1", "rogue_2", "rogue_3", "rogue_4"]:
             relics = json_data['details'][topic]['items']
+            # print(relics)
             relic_names[topic] = [relic['name'] for relic in relics.values() if relic['type'] == 'RELIC']
-    
+            names_2_ids[topic] = {relic['name']: relic['id'] for relic in relics.values() if relic['type'] == 'RELIC'}
+
     def __init__(self):
         self.all_relics = []
         self._handle = self._c_run_agent
@@ -188,13 +195,15 @@ class RelicRecognition(CustomAction):
                 text = all.text
                 if(text == ''):
                     continue
-                print(text)
+                # print(text)
                 if (text[-1]=='a' or text[-1]=='A'):
                     text = text[:-1]+'α'
                 if (text[-1]=='b' or text[-1]=='B'):
                     text = text[:-1]+'β'
                 if (text[-1]=='y' or text[-1]=='Y'):
                     text = text[:-1]+'γ'
+                if (text == '雕词刀'):
+                    text = '雕词錾刀'
                 if text in self.relic_names[topic]:
                     # print(text)
                     relic_list.append(text)
@@ -243,8 +252,11 @@ class RelicRecognition(CustomAction):
             time.sleep(1)
             context.tasker.controller.post_click(1245, 600).wait()
 
-        print(self.all_relics)
-
+        # print(self.all_relics)
+        print("relic ids:", json.dumps([self.names_2_ids[topic][relic] for relic in self.all_relics], ensure_ascii=False))
+        # copy to clipboard
+        pyperclip.copy(json.dumps([self.names_2_ids[topic][relic] for relic in self.all_relics], ensure_ascii=False))
+        print("relic ids copied to clipboard.")
         return CustomAction.RunResult(success=True)
 
 
